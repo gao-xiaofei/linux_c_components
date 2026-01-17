@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
-find_package(eclipse-paho-mqtt-c 1.3.9 REQUIRED)
-project(mqtt_c_demo C)
+
+project(doso_mqtt C)
 include_directories(/usr/local/include)
 link_directories(/usr/local/lib)
 set(CMAKE_C_STANDARD 99)
 
-add_executable(mqtt_c_demo main_mqtt.c)
-target_link_libraries(mqtt_c_demo paho-mqtt3c)
+add_executable(doso_mqtt main_mqtt.c)
+target_link_libraries(doso_mqtt paho-mqtt3c)

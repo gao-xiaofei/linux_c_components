@@ -19,16 +19,33 @@
 #define TIMEOUT     10000L
 
 
-void publish(MQTTClient client, char *topic, char *payload) {
+int doso_sync_mqtt_publish(MQTTClient client, char *topic, char *payload, uint16_t payload_len) 
+{
+    int rc = 0;
     MQTTClient_message message = MQTTClient_message_initializer;
     message.payload = payload;
-    message.payloadlen = strlen(payload);
+    message.payloadlen = payload_len;
     message.qos = QOS;
     message.retained = 0;
     MQTTClient_deliveryToken token;
-    MQTTClient_publishMessage(client, topic, &message, &token);
-    MQTTClient_waitForCompletion(client, token, TIMEOUT);
-    printf("Send `%s` to topic `%s` \n", payload, TOPIC);
+    rc = MQTTClient_publishMessage(client, topic, &message, &token);
+    if(rc != MQTTCLIENT_SUCCESS){
+        printf("MQTTClient_publishMessage failed: %d\n", rc);
+        return rc;
+    }
+    rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+    if(rc != MQTTCLIENT_SUCCESS){
+        printf("MQTTClient_waitForClmpletion failed: %d\n", rc);
+    }
+    return rc;
+}
+
+void connect_lost(void* context, char* cause) {
+    // 从context中取出MQTT客户端实例（需与注册时传入的context类型一致）
+    MQTTClient client = *(MQTTClient*)context;
+    
+    printf("=== 连接丢失！原因：%s ===\n", (cause != NULL) ? cause : "未指定");
+    
 }
 
 int on_message(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
@@ -44,6 +61,8 @@ void *Thread1_Loop()
 {
 
     int rc;
+    char payload[16];
+    int i = 0;
     MQTTClient client;
 
     MQTTClient_create(&client, ADDRESS, CLIENTID, 0, NULL);
@@ -51,27 +70,29 @@ void *Thread1_Loop()
     conn_opts.username = USERNAME;
     conn_opts.password = PASSWORD;
 
-
-
-    MQTTClient_setCallbacks(client, NULL, NULL, on_message, NULL);
+    MQTTClient_setCallbacks(client, NULL, connect_lost, on_message, NULL);
     if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
         printf("Failed to connect, return code %d\n", rc);
         exit(-1);
     } else {
         printf("Connected to MQTT Broker!\n");
     }
+
     // subscribe topic
-    MQTTClient_subscribe(client, TOPIC, QOS);
-    
-    char payload[16];
-    int i = 0;
+    rc = MQTTClient_subscribe(client, TOPIC, QOS);
+    if(rc != MQTTCLIENT_SUCCESS){
+        printf("MQTTClient_subscribe failed: %d\n", rc);
+    }
 
     for (;;) {
+     
         // publish message to broker
         snprintf(payload, 16, "message-%d", i++);
-        publish(client, TOPIC, payload);
+        doso_sync_mqtt_publish(client, TOPIC, payload,16);
         usleep(1*100*1000);
+    
     }
+
     MQTTClient_unsubscribe(client, TOPIC);
     MQTTClient_disconnect(client, TIMEOUT);
     MQTTClient_destroy(&client);
@@ -95,8 +116,6 @@ int main()
 {
 
 	printf("test start ...\n");
-
-	
 
 	struct sched_param param;
 	pthread_attr_t tattr;

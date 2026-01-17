@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-
+#include <stdbool.h>
 #include "MQTTClient.h"
 
 
@@ -15,7 +15,7 @@
 #define PASSWORD    "public"
 #define CLIENTID    "c-client"
 #define QOS         0
-#define TOPIC       "emqx/c-test"
+#define TOPIC       "topic/c-test"
 #define TIMEOUT     10000L
 
 static int8_t is_alive = 0;
@@ -42,7 +42,7 @@ int doso_sync_mqtt_publish(MQTTClient client, char *topic, char *payload, uint16
 }
 
 void connect_lost(void* context, char* cause) {
-    // 从context中取出MQTT客户端实例（需与注册时传入的context类型一致）
+
     MQTTClient client = *(MQTTClient*)context;
     
     printf("=== 连接丢失！原因：%s ===\n", (cause != NULL) ? cause : "未指定");
@@ -53,7 +53,7 @@ void connect_lost(void* context, char* cause) {
     const int RETRY_INTERVAL = 2; // 重试间隔（秒）
     
     while (retry_count < MAX_RETRY) {
-        printf("正在尝试重连（第%d/%d次）...\n", retry_count + 1, MAX_RETRY);
+        printf("尝试重连mqtt服务器（第%d/%d次）...\n", retry_count + 1, MAX_RETRY);
         
         // 调用MQTTClient_connect尝试重连（参数需与初始连接一致）
         MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
@@ -62,11 +62,11 @@ void connect_lost(void* context, char* cause) {
         
         int connect_rc = MQTTClient_connect(client, &conn_opts);
         if (connect_rc == MQTTCLIENT_SUCCESS) {
-            printf("重连成功！\n");
+            printf("重连mqtt服务器成功！\n");
             is_alive = true;
             return;  // 重连成功，退出回调函数
         } else {
-            printf("重连失败，错误码：%d\n", connect_rc);
+            printf("重连mqtt服务器失败，错误码：%d\n", connect_rc);
             retry_count++;
             sleep(RETRY_INTERVAL);  // 间隔指定时间后重试
         }
@@ -74,7 +74,11 @@ void connect_lost(void* context, char* cause) {
     
 }
 
-int on_message(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
+int on_message(void *context, char *topicName, int topicLen, MQTTClient_message *message) 
+{
+    (void)topicLen;
+    (void)context;
+    // MQTTClient client = *(MQTTClient*)context;
     char *payload = message->payload;
     printf("Received `%s` from `%s` topic \n", payload, topicName);
     MQTTClient_freeMessage(&message);
@@ -87,7 +91,7 @@ void *Thread1_Loop()
 {
 
     int rc;
-    char payload[16];
+    char payload[32];
     int i = 0;
     MQTTClient client;
 
@@ -96,7 +100,7 @@ void *Thread1_Loop()
     conn_opts.username = USERNAME;
     conn_opts.password = PASSWORD;
 
-    MQTTClient_setCallbacks(client, NULL, connect_lost, on_message, NULL);
+    MQTTClient_setCallbacks(client, &client, connect_lost, on_message, NULL);
     if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
         printf("Failed to connect, return code %d\n", rc);
         exit(-1);
@@ -105,7 +109,7 @@ void *Thread1_Loop()
         is_alive = true;
     }
 
-    // subscribe topic
+    // TODO: 重连后重新subscribe对应topic
     rc = MQTTClient_subscribe(client, TOPIC, QOS);
     if(rc != MQTTCLIENT_SUCCESS){
         printf("MQTTClient_subscribe failed: %d\n", rc);
@@ -115,20 +119,18 @@ void *Thread1_Loop()
      
         if(is_alive){
             // publish message to broker
-            snprintf(payload, 16, "message-%d", i++);
-            doso_sync_mqtt_publish(client, TOPIC, payload,16);
+            snprintf(payload, 32, "message-%d", i++);
+            doso_sync_mqtt_publish(client, TOPIC, payload, 32);
         }else{
             printf("MQTT client is not alive! \n");
         }
 
         usleep(1*100*1000);
-    
     }
 
     MQTTClient_unsubscribe(client, TOPIC);
     MQTTClient_disconnect(client, TIMEOUT);
     MQTTClient_destroy(&client);
-    return rc;
 
 }
 

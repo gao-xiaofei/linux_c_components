@@ -18,6 +18,7 @@
 #define TOPIC       "emqx/c-test"
 #define TIMEOUT     10000L
 
+static int8_t is_alive = 0;
 
 int doso_sync_mqtt_publish(MQTTClient client, char *topic, char *payload, uint16_t payload_len) 
 {
@@ -45,6 +46,31 @@ void connect_lost(void* context, char* cause) {
     MQTTClient client = *(MQTTClient*)context;
     
     printf("=== 连接丢失！原因：%s ===\n", (cause != NULL) ? cause : "未指定");
+    is_alive = false;
+
+    int retry_count = 0;          // 重试计数器
+    const int MAX_RETRY = 5000;      // 最大重试次数
+    const int RETRY_INTERVAL = 2; // 重试间隔（秒）
+    
+    while (retry_count < MAX_RETRY) {
+        printf("正在尝试重连（第%d/%d次）...\n", retry_count + 1, MAX_RETRY);
+        
+        // 调用MQTTClient_connect尝试重连（参数需与初始连接一致）
+        MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+        conn_opts.username = USERNAME;
+        conn_opts.password = PASSWORD;
+        
+        int connect_rc = MQTTClient_connect(client, &conn_opts);
+        if (connect_rc == MQTTCLIENT_SUCCESS) {
+            printf("重连成功！\n");
+            is_alive = true;
+            return;  // 重连成功，退出回调函数
+        } else {
+            printf("重连失败，错误码：%d\n", connect_rc);
+            retry_count++;
+            sleep(RETRY_INTERVAL);  // 间隔指定时间后重试
+        }
+    }
     
 }
 
@@ -76,6 +102,7 @@ void *Thread1_Loop()
         exit(-1);
     } else {
         printf("Connected to MQTT Broker!\n");
+        is_alive = true;
     }
 
     // subscribe topic
@@ -86,9 +113,14 @@ void *Thread1_Loop()
 
     for (;;) {
      
-        // publish message to broker
-        snprintf(payload, 16, "message-%d", i++);
-        doso_sync_mqtt_publish(client, TOPIC, payload,16);
+        if(is_alive){
+            // publish message to broker
+            snprintf(payload, 16, "message-%d", i++);
+            doso_sync_mqtt_publish(client, TOPIC, payload,16);
+        }else{
+            printf("MQTT client is not alive! \n");
+        }
+
         usleep(1*100*1000);
     
     }

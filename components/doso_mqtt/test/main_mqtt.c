@@ -2,8 +2,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <stdbool.h>
+
+#include <pthread.h>
 #include "MQTTClient.h"
 
 
@@ -19,8 +20,8 @@
 #define TIMEOUT             10000L
 #define RETRY_DELAY_MS      2000
 
-#define SUB_TOPIC_1 "topic/c-test"
-#define SUB_TOPIC_2 "topic/c-test2"
+#define SUB_TOPIC_1         "topic/c-test"
+#define SUB_TOPIC_2         "topic/c-test2"
 
 static int8_t is_alive = false;
 int retry_count = 0;
@@ -38,6 +39,7 @@ int doso_sync_mqtt_subscribe(MQTTClient client)
     return rc;
 }
 
+/*
 int doso_sync_mqtt_unsubscribe(MQTTClient client)
 {
     int rc = MQTTClient_unsubscribe(client, SUB_TOPIC_1);
@@ -48,7 +50,9 @@ int doso_sync_mqtt_unsubscribe(MQTTClient client)
     if(rc != MQTTCLIENT_SUCCESS){
         printf("MQTTClient_unsubscribe failed: %d\n", rc);
     }
+    return rc;
 }
+*/
 
 int doso_sync_mqtt_publish(MQTTClient client, char *topic, char *payload, uint16_t payload_len) 
 {
@@ -73,12 +77,12 @@ int doso_sync_mqtt_publish(MQTTClient client, char *topic, char *payload, uint16
 
 void connect_lost(void* context, char* cause) {
 
-    MQTTClient client = *(MQTTClient*)context;
-    
+    // MQTTClient client = *(MQTTClient*)context;
+    (void)context;
     printf("=== 连接丢失！原因：%s ===\n", (cause != NULL) ? cause : "未指定");
-    doso_sync_mqtt_unsubscribe(client);
-    MQTTClient_disconnect(client, TIMEOUT);
-    MQTTClient_destroy(&client);
+    // doso_sync_mqtt_unsubscribe(client);
+    // MQTTClient_disconnect(client, TIMEOUT);
+    // MQTTClient_destroy(&client);
     is_alive = false;
     
 }
@@ -99,7 +103,6 @@ int on_message(void *context, char *topicName, int topicLen, MQTTClient_message 
 void *Thread1_Loop()
 {
 
-    int rc;
     char payload[32];
     int i = 0;
     MQTTClient client;
@@ -123,12 +126,11 @@ void *Thread1_Loop()
                 printf("连接mqtt服务器成功！\n");
                 doso_sync_mqtt_subscribe(client);
                 is_alive = true;
-                return;  // 重连成功，退出回调函数
             } else {
                 printf("连接mqtt服务器失败，错误码：%d\n", connect_rc);
                 
-                MQTTClient_disconnect(client, TIMEOUT);
-                MQTTClient_destroy(&client);
+                // MQTTClient_disconnect(client, TIMEOUT);
+                // MQTTClient_destroy(&client);
                 is_alive = false;
                 retry_count++;
                 usleep(RETRY_DELAY_MS*1000);  

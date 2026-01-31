@@ -1,0 +1,10 @@
+{
+    "app_name": "demo_app",
+    "version": "1.0.0",
+    "server": {
+      "ip": "127.0.0.1",
+      "port": 8080
+    },
+    "log_level": "info",
+    "max_connections": 1000
+  }

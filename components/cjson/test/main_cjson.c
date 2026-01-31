@@ -8,13 +8,13 @@
 #include "cJSON.h"
 
 
-char* read_file(const char* filename, long* file_size);
+char* read_file(const char* filename, size_t* file_size);
 
 
 void *Thread1_Loop()
 {
-	const char* config_path = "./config.json";
-    long file_size = 0;
+	const char* config_path = "../config.json";
+    size_t file_size = 0;
     char* json_content = NULL;
     cJSON* root = NULL;
 
@@ -120,7 +120,7 @@ int main()
 }
 
 // 读取文件内容到缓冲区
-char* read_file(const char* filename, long* file_size) 
+char* read_file(const char* filename, size_t* file_size) 
 {
     FILE* fp = fopen(filename, "rb");
     if (fp == NULL) {

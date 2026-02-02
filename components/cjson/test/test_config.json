@@ -1,8 +1,8 @@
 {
     "app_name": "demo_app",
     "version": "1.0.0",
-    "server": {
-      "gateway_ip": "192.168.3.100",
+    "gateway": {
+      "ip": "192.168.3.100",
       "gins_port": 30828,
       "gins_data_hz": 1.0,
       "thruster_port": 30829,
@@ -10,6 +10,10 @@
       "battery_port": 30830,
       "battery_data_hz": 1.0
     },
-    "log_level": 0, // 0: debug, 1: info, 2: warn, 3: error, 4: fatal
+    "plc": {
+      "ip": "192.168.3.100",
+      "port": 502
+    },
+    "log_level": 0,
     "max_connections": 1000
   }

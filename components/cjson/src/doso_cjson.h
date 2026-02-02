@@ -14,11 +14,13 @@
 #define DEFAULT_THRUSTER_HZ     50.0f
 #define DEFAULT_BATTERY_PORT    8003
 #define DEFAULT_BATTERY_HZ      10.0f    
+#define DEFAULT_PLC_IP          "192.168.1.2"
+#define DEFAULT_PLC_PORT        500
 #define DEFAULT_LOG_LEVEL       1
 #define DEFAULT_MAX_CONN        10       
 
-struct server{
-    char gateway_ip[16];        // 网关IP，IPv4最多15个字符+1个结束符
+struct gateway{
+    char ip[16];        // 网关IP，IPv4最多15个字符+1个结束符
     int gins_port;              // gins端口
     float gins_data_hz;         // gins数据频率
     int thruster_port;          // 推进器端口
@@ -26,11 +28,16 @@ struct server{
     int battery_port;           // 电池端口
     float battery_data_hz;      // 电池数据频率
 };
+struct plc{
+    char ip[16]; 
+    int port;              
+};
 
 struct doso_cjson{
     char app_name[32];          // 应用名称，预留足够长度
     int version[3];             // 版本号，如"1.0.0"格式
-    struct server server;        // 嵌套服务器子配置
+    struct gateway gateway;        // 嵌套服务器子配置
+    struct plc plc;
     int log_level;              // 日志级别，对应宏定义
     int max_connections;        // 最大连接数
 };
